@@ -9,3 +9,4 @@ plotly
 beautifulsoup4
 pydantic
 requests
+tiktoken==0.5.2  # Pin to a version with a pre-built wheel
