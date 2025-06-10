@@ -1,72 +1,83 @@
-# crewAI-trip-planner
+# CrewAI Trip Planner
 
-A smart, agent-based trip planner leveraging AI and Llama models for generating and managing travel itineraries. Built with Python and Jupyter Notebook, this project aims to automate and optimize trip planning with advanced reasoning and retrieval capabilities.
+An AI-powered trip planning system that uses multiple APIs to provide comprehensive travel information and recommendations.
 
 ## Features
 
-- **Agent-based planning:** Modular agents coordinate to create and refine trip plans.
-- **Integration with Llama3:** Utilizes Llama3 models for reasoning and retrieval-augmented generation (RAG).
-- **Jupyter Notebook demos:** Interactive exploration and rapid prototyping.
-- **Extensible tooling:** Easily add custom tasks and agents.
+- Hotel and restaurant recommendations
+- Weather forecasts
+- Currency conversion
+- Local events and activities
+- Flight information
+- Public transport details
+- Travel safety information
 
-## Installation
+## Setup
 
-1. **Clone the repository:**
-   ```sh
-   git clone https://github.com/Hrishitcodethis/crewAI-trip-planner.git
-   cd crewAI-trip-planner
-   ```
+1. Clone the repository:
+```bash
+git clone https://github.com/Hrishitcodethis/crewAI-trip-planner.git
+cd crewAI-trip-planner
+```
 
-2. **Install dependencies:**
-   - With [Poetry](https://python-poetry.org/):
-     ```sh
-     poetry install
-     ```
-   - Or manually (see `pyproject.toml` for dependencies).
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-3. **(Optional) Set up Llama3 model:**
-   - Refer to `Llama3Modelfile.txt` for details.
-   - You may need to run the setup script:
-     ```sh
-     ./llama3crew.sh
-     ```
+3. Set up environment variables:
+   - Copy `.env.example` to `.env`
+   - Fill in your API keys in the `.env` file
+
+## Required API Keys
+
+The application requires the following API keys:
+
+### OpenTripMap API
+- Used for: Hotel and restaurant recommendations
+- Get your key at: https://opentripmap.io/developers
+- Free tier available
+
+### WeatherAPI.com
+- Used for: Weather forecasts and conditions
+- Get your key at: https://www.weatherapi.com/
+- Free tier: 1,000,000 calls per month
+
+### Currency API
+- Used for: Currency conversion
+- Get your key at: https://exchangerate.host/
+- Free tier available
+
+### Eventbrite API
+- Used for: Local events and activities
+- Get your key at: https://www.eventbrite.com/platform/api
+- Free tier available
+
+### Aviation Stack API
+- Used for: Flight information and schedules
+- Get your key at: https://aviationstack.com/
+- Free tier: 500 requests per month
+
+### TransitLand API
+- Used for: Public transport information
+- Get your key at: https://transit.land/developers
+- Free tier available
 
 ## Usage
 
-- **Interactive notebook demo:**  
-  Open `langgraph_rag_agent_llama3_local (1).ipynb` in JupyterLab to explore or test the planner.
-- **Run main script:**  
-  ```sh
-  poetry run python main.py
-  ```
-  Or, if not using Poetry:
-  ```sh
-  python main.py
-  ```
-
-## Project Structure
-
-- `main.py` — Main entry point for the planner.
-- `agents.py` — Definitions of agent logic and orchestration.
-- `tasks.py` — Task definitions and workflows.
-- `tools/` — Additional utilities and tools for agents.
-- `Llama3Modelfile.txt` — Model configuration/instructions.
-- `llama3crew.sh` — Shell script for environment/model setup.
-- `pyproject.toml` / `poetry.lock` — Dependency management.
-
-## Requirements
-
-- Python 3.8+
-- Poetry (recommended) or pip
-- Compatible hardware for running Llama3 models (see model file for details)
+[Add usage instructions here]
 
 ## Contributing
 
-Pull requests and issues are welcome! Please open an issue for bug reports or feature suggestions.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-[MIT](LICENSE) (or specify your license here)
+[Add license information here]
 
 ---
 
