@@ -7,9 +7,15 @@ import sys
 from typing import Dict, List, Optional
 import json
 from dotenv import load_dotenv
-import os
-
 load_dotenv()
+import os
+from trip_planner.telemetry import setup_telemetry
+
+# Initialize telemetry
+try:
+    tracer_provider = setup_telemetry()
+except Exception as e:
+    print(f"Warning: Failed to initialize telemetry: {str(e)}")
 
 class TripCrew:
     def __init__(self, origin: str, cities: List[str], date_range: Dict[str, str], 

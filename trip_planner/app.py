@@ -6,19 +6,31 @@ import plotly.express as px
 import os
 from dotenv import load_dotenv
 load_dotenv()
+from trip_planner.telemetry import setup_telemetry
 from langchain_openai import ChatOpenAI
 from .agents import TripAgents, TravelInput, CityInput
 from .guardrails import GuardrailManager
 from .tools import TravelTools
 from crewai import Task, Crew
+from opentelemetry import trace
 
-# Set page config
-st.set_page_config(
-    page_title="AI Travel Planner",
-    page_icon="✈️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Initialize telemetry (will only initialize once due to singleton pattern)
+tracer_provider = setup_telemetry()
+if tracer_provider is None:
+    st.warning("""
+    Telemetry is not available. The application will continue without tracing.
+    To enable tracing, set the following environment variables:
+    - PHOENIX_ENABLED=true
+    - PHOENIX_CLIENT_HEADERS=api_key=your_phoenix_api_key
+    """)
+else:
+    st.success("Telemetry initialized successfully!")
+    # Test trace
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("app_initialization") as span:
+        span.set_attribute("app.name", "AI Travel Planner")
+        span.set_attribute("app.version", "1.0.0")
+        st.info("Test trace created successfully!")
 
 # Custom CSS
 st.markdown("""
@@ -46,6 +58,7 @@ llm = ChatOpenAI(
     model="gpt-4-turbo-preview",
     temperature=0.7
 )
+
 
 # Initialize agents
 agents = TripAgents(llm)
@@ -336,7 +349,11 @@ def city_selection_form():
                     agents=[city_expert],
                     tasks=[task]
                 )
-                result = crew.kickoff()
+                with tracer.start_as_current_span("city_recommendation_task") as span:  # ✅ Tracing starts here
+                    span.set_attribute("season", season)
+                    span.set_attribute("budget", budget)
+                    span.set_attribute("preferences", str(preferences))
+                    result = crew.kickoff()
                 
                 # Debug logging
                 st.write("Raw result:", result)
@@ -530,11 +547,17 @@ def travel_planning_form():
                     }}""",
                     agent=travel_expert
                 )
+                travel_expert = agents.travel_planning_expert()
+                task = Task(description=f"Plan travel for: {travel_input.dict()}", agent=travel_expert)
                 crew = Crew(
                     agents=[travel_expert],
                     tasks=[task]
                 )
-                result = crew.kickoff()
+                with tracer.start_as_current_span("travel_plan_generation_task") as span:  # ✅ Tracing block added
+                    span.set_attribute("destination", travel_input.destination)
+                    span.set_attribute("duration_days", (end_date - start_date).days)
+                    span.set_attribute("activities", str(activities))
+                    result = crew.kickoff()
                 
                 # Validate output using guardrails
                 try:

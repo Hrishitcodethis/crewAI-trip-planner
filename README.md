@@ -19,6 +19,7 @@ Access the deployed Streamlit app here:
 - **Guardrails:** Input/output validation and business logic enforcement for robust plans.
 - **Streamlit Web App:** User-friendly, interactive interface for planning trips.
 - **Extensible tooling:** Easily add custom tasks, agents, and tools.
+- **Observability:** Built-in telemetry and tracing support with Phoenix integration.
 
 ---
 
@@ -38,6 +39,14 @@ Access the deployed Streamlit app here:
 3. **Set up API keys:**
    - Add your API keys in a `.env` file (for local use) or via Streamlit secrets (for deployment).
    - Required: `OPENAI_API_KEY`, and keys for OpenTripMap, WeatherAPI, Currency API, Eventbrite, AviationStack, TransitLand, etc.
+
+4. **Configure Telemetry (Optional):**
+   - For Phoenix tracing:
+     ```sh
+     export PHOENIX_ENABLED=true
+     export PHOENIX_CLIENT_HEADERS="api_key=your_phoenix_api_key"
+     ```
+   - If not configured, the app will use console tracing by default.
 
 ---
 
@@ -71,6 +80,7 @@ Access the deployed Streamlit app here:
 - `trip_planner/tasks.py` — Task prompt templates for agents.
 - `trip_planner/guardrails.py` — Input/output/business rule validation.
 - `trip_planner/tools/` — Modular tools for travel, search, and calculations.
+- `trip_planner/telemetry.py` — Telemetry and tracing configuration.
 - `requirements.txt` — Dependency management.
 - `.streamlit/secrets.toml` — (Not committed) for API keys on Streamlit Cloud.
 - `main.py` — CLI-based planning (legacy/advanced use).
@@ -83,6 +93,7 @@ Access the deployed Streamlit app here:
 - Python 3.11+
 - pip
 - API keys for OpenAI and other integrated services
+- (Optional) Phoenix API key for advanced tracing
 
 ---
 

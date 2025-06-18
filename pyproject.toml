@@ -23,6 +23,10 @@ pyowm = '3.3.0'
 python-dotenv = "1.0.0"
 openai = "^1.12.0"
 setuptools = "^69.2.0"
+opentelemetry-api = "1.20.0"
+opentelemetry-sdk = "1.20.0"
+opentelemetry-exporter-otlp = "1.20.0"
+opentelemetry-instrumentation-crewai = "0.1.0"
 
 [tool.pyright]
 # https://github.com/microsoft/pyright/blob/main/docs/configuration.md

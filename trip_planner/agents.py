@@ -1,16 +1,19 @@
-from crewai import Agent
+from crewai import Agent, Task
 from textwrap import dedent
 from langchain_openai import ChatOpenAI
 import os
+from datetime import datetime
+import uuid
+import pandas as pd
 from typing import List, Dict, Any
 from pydantic import BaseModel, Field, validator
-from langchain.tools import Tool
 from trip_planner.tools import (
     CalculatorTools,
     SearchTools,
     TravelTools
 )
 from trip_planner.guardrails import GuardrailManager
+from trip_planner.telemetry import setup_telemetry
 
 
 class TravelInput(BaseModel):
@@ -119,10 +122,20 @@ class CityOutput(BaseModel):
         return v
 
 
+def create_tool(name: str, func, description: str):
+    """Helper function to create a tool in the correct format"""
+    print(f"Registering tool: {name} | Type: {type(func)}")  # DEBUG LINE
+    return {
+        "name": name,
+        "description": description,
+        "func": func
+    }
+
 class TripAgents:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI, agent_name="Trip Agent"):
         self.llm = llm
         self.guardrails = GuardrailManager()
+        configure_tracing(agent_name)
 
     def expert_travel_agent(self):
         return Agent(
@@ -136,11 +149,26 @@ class TripAgents:
                         and constraints while staying within the specified budget.
                         """),
             tools=[
-                SearchTools.search_internet,
-                CalculatorTools.calculate,
-                TravelTools.calculate_travel_budget,
-                TravelTools.get_safety_information,
-                TravelTools.get_weather_forecast
+                create_tool(
+                    "search_internet",
+                    SearchTools.search_internet,
+                    "Search the internet for travel information and recommendations"
+                ),
+                create_tool(
+                    "get_weather_forecast",
+                    TravelTools.get_weather_forecast,
+                    "Get weather forecast for a destination"
+                ),
+                create_tool(
+                    "get_local_events",
+                    TravelTools.get_local_events,
+                    "Get local events for a destination"
+                ),
+                create_tool(
+                    "calculate_travel_budget",
+                    TravelTools.calculate_travel_budget,
+                    "Calculate estimated travel budget for a destination"
+                )
             ],
             verbose=True,
             llm=self.llm,
@@ -155,29 +183,51 @@ class TripAgents:
         return Agent(
             role="City Selection Expert",
             goal="Recommend the best cities based on user preferences and constraints",
-            backstory="""You are an expert travel advisor with extensive knowledge of cities worldwide.\nYou specialize in matching travelers with destinations that best suit their preferences,\nbudget, and travel style. Use the calculate_match_score tool to evaluate how well each city\nmatches the user's preferences.\nNEVER attempt to delegate work to a co-worker. If you cannot find real cities, return a static JSON with at least one city recommendation in the required format.\nExample fallback:\n{\n  \"recommended_cities\": [\n    {\n      \"name\": \"Barcelona\",\n      \"country\": \"Spain\",\n      \"description\": \"A vibrant city known for its beaches and rich cultural heritage.\",\n      \"match_score\": 0.9,\n      \"highlights\": [\"Sagrada Familia\", \"Beach\", \"Local Cuisine\"],\n      \"estimated_cost\": {\n        \"accommodation\": 80,\n        \"food\": 40,\n        \"activities\": 30,\n        \"total_per_day\": 150\n      }\n    }\n  ]\n}\n""",
+            backstory="""You are an expert travel advisor with extensive knowledge of cities worldwide.
+            You specialize in matching travelers with destinations that best suit their preferences,
+            budget, and travel style. Use the calculate_match_score tool to evaluate how well each city
+            matches the user's preferences.
+            NEVER attempt to delegate work to a co-worker. If you cannot find real cities, return a static JSON with at least one city recommendation in the required format.
+            Example fallback:
+            {
+              "recommended_cities": [
+                {
+                  "name": "Barcelona",
+                  "country": "Spain",
+                  "description": "A vibrant city known for its beaches and rich cultural heritage.",
+                  "match_score": 0.9,
+                  "highlights": ["Sagrada Familia", "Beach", "Local Cuisine"],
+                  "estimated_cost": {
+                    "accommodation": 80,
+                    "food": 40,
+                    "activities": 30,
+                    "total_per_day": 150
+                  }
+                }
+              ]
+            }""",
             verbose=True,
             llm=self.llm,
             tools=[
-                Tool(
-                    name="search_internet",
-                    func=SearchTools.search_internet,
-                    description="Search the internet for information about cities and destinations"
+                create_tool(
+                    "search_internet",
+                    SearchTools.search_internet,
+                    "Search the internet for information about cities and destinations"
                 ),
-                Tool(
-                    name="calculate_travel_budget",
-                    func=TravelTools.calculate_travel_budget,
-                    description="Calculate estimated travel budget for a destination"
+                create_tool(
+                    "calculate_travel_budget",
+                    TravelTools.calculate_travel_budget,
+                    "Calculate estimated travel budget for a destination"
                 ),
-                Tool(
-                    name="get_safety_information",
-                    func=TravelTools.get_safety_information,
-                    description="Get safety information for a destination"
+                create_tool(
+                    "get_safety_information",
+                    TravelTools.get_safety_information,
+                    "Get safety information for a destination"
                 ),
-                Tool(
-                    name="calculate_match_score",
-                    func=TravelTools.calculate_match_score,
-                    description="Calculate how well a city matches the user's preferences"
+                create_tool(
+                    "calculate_match_score",
+                    TravelTools.calculate_match_score,
+                    "Calculate how well a city matches the user's preferences"
                 )
             ],
             input_schema=CityInput,
@@ -245,10 +295,26 @@ class TripAgents:
             goal=dedent(f"""Recommend the best hotels and rentals, suggest ideal neighborhoods to stay in, provide booking tips, 
                         and analyze accommodation reviews to ensure the best stay for travelers."""),
             tools=[
-                SearchTools.search_internet,
-                TravelTools.get_accommodation_options,
-                TravelTools.calculate_travel_budget,
-                TravelTools.get_safety_information
+                create_tool(
+                    "search_internet",
+                    SearchTools.search_internet,
+                    "Search the internet for accommodation information"
+                ),
+                create_tool(
+                    "get_accommodation_options",
+                    TravelTools.get_accommodation_options,
+                    "Get accommodation options for a destination"
+                ),
+                create_tool(
+                    "calculate_travel_budget",
+                    TravelTools.calculate_travel_budget,
+                    "Calculate estimated travel budget for a destination"
+                ),
+                create_tool(
+                    "get_safety_information",
+                    TravelTools.get_safety_information,
+                    "Get safety information for a destination"
+                )
             ],
             verbose=True,
             llm=self.llm,
@@ -262,10 +328,26 @@ class TripAgents:
             goal=dedent(f"""Recommend the best restaurants, suggest local specialties, provide dietary restriction information, 
                         and create comprehensive food tour itineraries that showcase the destination's culinary scene."""),
             tools=[
-                SearchTools.search_internet,
-                TravelTools.get_restaurant_recommendations,
-                TravelTools.get_local_events,
-                TravelTools.calculate_travel_budget
+                create_tool(
+                    "search_internet",
+                    SearchTools.search_internet,
+                    "Search the internet for food and dining information"
+                ),
+                create_tool(
+                    "get_restaurant_recommendations",
+                    TravelTools.get_restaurant_recommendations,
+                    "Get restaurant recommendations for a destination"
+                ),
+                create_tool(
+                    "get_local_events",
+                    TravelTools.get_local_events,
+                    "Get local events for a destination"
+                ),
+                create_tool(
+                    "calculate_travel_budget",
+                    TravelTools.calculate_travel_budget,
+                    "Calculate estimated travel budget for a destination"
+                )
             ],
             verbose=True,
             llm=self.llm,
@@ -282,25 +364,25 @@ class TripAgents:
             verbose=True,
             llm=self.llm,
             tools=[
-                Tool(
-                    name="search_internet",
-                    func=SearchTools.search_internet,
-                    description="Search the internet for travel information and recommendations"
+                create_tool(
+                    "search_internet",
+                    SearchTools.search_internet,
+                    "Search the internet for travel information"
                 ),
-                Tool(
-                    name="get_weather_forecast",
-                    func=TravelTools.get_weather_forecast,
-                    description="Get weather forecast for a destination"
+                create_tool(
+                    "get_weather_forecast",
+                    TravelTools.get_weather_forecast,
+                    "Get weather forecast for a destination"
                 ),
-                Tool(
-                    name="get_local_events",
-                    func=TravelTools.get_local_events,
-                    description="Get local events for a destination"
+                create_tool(
+                    "get_local_events",
+                    TravelTools.get_local_events,
+                    "Get local events for a destination"
                 ),
-                Tool(
-                    name="calculate_travel_budget",
-                    func=TravelTools.calculate_travel_budget,
-                    description="Calculate estimated travel budget for a destination"
+                create_tool(
+                    "calculate_travel_budget",
+                    TravelTools.calculate_travel_budget,
+                    "Calculate estimated travel budget for a destination"
                 )
             ],
             output_format={
@@ -336,8 +418,7 @@ class TripAgents:
                         "activities": "number",
                         "transportation": "number",
                         "total": "number"
-                    },
-                    "recommendations": ["string"]
+                    }
                 }
             }
         )
@@ -346,22 +427,22 @@ class TripAgents:
         """Create an agent for budget planning"""
         return Agent(
             role="Budget Planning Expert",
-            goal="Create and manage travel budgets",
-            backstory="""You are a financial expert specializing in travel budgets.
-            You help travelers make the most of their money while ensuring they have
-            a comfortable and enjoyable trip.""",
+            goal="Create detailed and accurate travel budgets",
+            backstory="""You are a financial expert specializing in travel budgeting.
+            You have extensive experience in creating detailed travel budgets that account for
+            all possible expenses while ensuring the best value for money.""",
             verbose=True,
             llm=self.llm,
             tools=[
-                Tool(
-                    name="calculate_travel_budget",
-                    func=TravelTools.calculate_travel_budget,
-                    description="Calculate estimated travel budget for a destination"
+                create_tool(
+                    "calculate_travel_budget",
+                    TravelTools.calculate_travel_budget,
+                    "Calculate estimated travel budget for a destination"
                 ),
-                Tool(
-                    name="calculate",
-                    func=CalculatorTools.calculate,
-                    description="Perform calculations for budget planning"
+                create_tool(
+                    "calculate",
+                    CalculatorTools.calculate,
+                    "Perform calculations for budget planning"
                 )
             ],
             output_format={
@@ -373,9 +454,14 @@ class TripAgents:
                         "activities": "number",
                         "transportation": "number",
                         "total": "number"
-                    },
-                    "savings_tips": ["string"],
-                    "splurge_recommendations": ["string"]
+                    }
                 }
             }
         )
+
+def configure_tracing(agent_name: str):
+    """Configure tracing for the agent"""
+    try:
+        setup_telemetry()
+    except Exception as e:
+        print(f"Failed to configure tracing: {str(e)}")

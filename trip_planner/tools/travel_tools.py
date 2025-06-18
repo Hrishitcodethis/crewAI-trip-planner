@@ -1,5 +1,4 @@
-from langchain.tools import BaseTool
-from typing import Optional, Type, Dict, Any, List
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 import requests
 import json
@@ -201,35 +200,31 @@ class TravelTools:
 
     @staticmethod
     def get_local_events(destination: str, date_range: Dict[str, str] = None) -> list:
-        """Get local events for a destination within a date range, using geocoding for accuracy."""
-        if date_range is None:
-            today = datetime.now()
-            date_range = {
-                "start": today.strftime("%Y-%m-%d"),
-                "end": (today + timedelta(days=7)).strftime("%Y-%m-%d")
-            }
+        """Get local events for a destination."""
         try:
             geo = TravelTools.geocode_city(destination)
-            city_name = geo.get('name', destination)
             url = "https://www.eventbriteapi.com/v3/events/search/"
-            headers = {
-                "Authorization": f"Bearer {os.getenv('EVENTBRITE_API_KEY')}"
-            }
             params = {
-                'location.address': city_name,
-                'start_date.range_start': date_range["start"],
-                'start_date.range_end': date_range["end"],
-                'expand': 'venue'
+                'location.latitude': geo['lat'],
+                'location.longitude': geo['lon'],
+                'location.within': '10km',
+                'expand': 'venue',
+                'token': os.getenv('EVENTBRITE_API_KEY')
             }
-            response = requests.get(url, headers=headers, params=params)
+            if date_range:
+                params['start_date.range_start'] = date_range.get('start')
+                params['start_date.range_end'] = date_range.get('end')
+            
+            response = requests.get(url, params=params)
             data = response.json()
+            
             events = []
-            for event in data.get('events', []):
+            for event in data.get('events', [])[:5]:
                 events.append({
-                    "name": event['name']['text'],
-                    "date": event['start']['local'],
-                    "description": event['description']['text'],
-                    "location": event['venue']['name'] if 'venue' in event else "TBD"
+                    'name': event['name']['text'],
+                    'date': event['start']['local'],
+                    'venue': event['venue']['name'],
+                    'url': event['url']
                 })
             if not events:
                 events.append({

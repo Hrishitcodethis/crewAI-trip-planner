@@ -9,3 +9,12 @@ plotly>=5.18.0
 geopy>=2.4.1
 tiktoken==0.5.2
 crewai>=0.11.0
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+opentelemetry-exporter-otlp>=1.20.0
+opentelemetry-instrumentation-crewai>=0.1.0
+# opentelemetry-instrumentation-streamlit>=0.1.0
+arize-phoenix-otel
+openinference-instrumentation-crewai
+crewai-tools
+openinference-instrumentation-litellm
